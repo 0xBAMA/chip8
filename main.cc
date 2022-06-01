@@ -8,6 +8,23 @@
 #endif
 #undef unixcheck
 
+// Window defines
+const int windowWidth = 1000;
+const int windowHeight = 500;
+const char* windowTitle = "CHIP-8 Interpreter";
+
+// SDL Resource Handles
+SDL_Window* window;
+SDL_Renderer* renderer;
+
 int main( int argc, char** argv ) {
+	// SDL Initialization
+	SDL_Init( SDL_INIT_EVERYTHING );
+	window = SDL_CreateWindow( windowTitle, 0, 0, windowWidth, windowHeight, SDL_WINDOW_SHOWN );
+	renderer = SDL_CreateRenderer( window, -1, 0 );
+
+	// leave it open for a second
+	SDL_Delay( 1000 );
+
 	return 0;
 }
