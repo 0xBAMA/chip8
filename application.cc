@@ -1,10 +1,5 @@
 #include "application.h"
 
-// Window defines
-const int windowWidth = 1280;
-const int windowHeight = 800;
-const char* windowTitle = "CHIP-8 Interpreter";
-
 uint8_t application::rng(){ // query for a random value 0-255
 	std::uniform_int_distribution< uint8_t > dist( 0, 255 );
 	return dist( *gen );
@@ -57,9 +52,7 @@ application::application() {
 
 	// copy the mockup to the renderer, as a background image ( titles, labels, etc )
 	SDL_Surface* image = IMG_Load( "memoryDisplay.png" );
-	SDL_Texture* texture = SDL_CreateTextureFromSurface( renderer, image );
-	SDL_Rect drawLocation = { 0, 0, windowWidth, windowHeight };
-	SDL_RenderCopyEx( renderer, texture, NULL, &drawLocation, 0.0f, NULL, SDL_FLIP_NONE );
+	texture = SDL_CreateTextureFromSurface( renderer, image );
 
 	// put initial state of the virtual machine in the display
 	updateGraphicsFull();
@@ -102,6 +95,62 @@ void application::frameClear() {
 			m_frame_buffer[ x + y * bufferWidth ] = 0;
 		}
 	}
+}
+
+uint8_t application::keyInput() {
+	bool gotOne = false;
+	/*
+	// input values         // keyboard
+	+---+---+---+---+       +---+---+---+---+
+	| 1 | 2 | 3 | C |       | 1 | 2 | 3 | 4 |
+	+---+---+---+---+       +---+---+---+---+
+	| 4 | 5 | 6 | D |       | q | w | e | r |
+	+---+---+---+---+  <--  +---+---+---+---+
+	| 7 | 8 | 9 | E |       | a | s | d | f |
+	+---+---+---+---+       +---+---+---+---+
+	| A | 0 | B | F |       | z | x | c | v |
+	+---+---+---+---+       +---+---+---+---+
+	*/
+	while ( !gotOne ) {
+		SDL_Event event;
+		while ( SDL_PollEvent( &event ) ) {
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_1 )
+				return 0x1;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_2 )
+				return 0x2;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_3 )
+				return 0x3;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_4 )
+				return 0xC;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_q )
+				return 0x4;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_w )
+				return 0x5;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_e )
+				return 0x6;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_r )
+				return 0xD;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_a )
+				return 0x7;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_s )
+				return 0x8;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_d )
+				return 0x9;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_f )
+				return 0xE;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_z )
+				return 0xA;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_x )
+				return 0x0;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_c )
+				return 0xB;
+			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_v )
+				return 0xF;
+		}
+	}
+	// maybe add a check for escape here, so that you can still abort while this loop waits
+	return -1; // because this will be a blocking wait, and nothing can happen on the main thread
+	// while it is waiting
 }
 
 /*
@@ -219,9 +268,8 @@ void application::tick() {
         case 0x07: // LoaD Vx, DT
             m_vregisters[(instruction & 0x0F00) >> 8] = m_delay_timer;
             break;
-        case 0x0A: // LoaD Vx, K
-            // implement keyInput
-            // m_vregisters[(instruction & 0x0F00) >> 8] = keyInput(); // not yet implemented
+        case 0x0A: // LoaD Vx, K - wait for key event to occur
+            m_vregisters[(instruction & 0x0F00) >> 8] = keyInput();
             break;
         case 0x15: // LoaD DT, Vx
             m_delay_timer = m_vregisters[(instruction & 0x0F00) >> 8];

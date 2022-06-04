@@ -93,8 +93,14 @@ void application::updateMemory() {
 	}
 }
 
+void application::drawBackground() {
+	SDL_Rect drawLocation = { 0, 0, windowWidth, windowHeight };
+	SDL_RenderCopyEx( renderer, texture, NULL, &drawLocation, 0.0f, NULL, SDL_FLIP_NONE );
+}
+
 void application::updateGraphicsFull() {
 	// for intial clearing of buffer
+	drawBackground();
 	clearDrawLists();
 	updateRegisters();
 	updateScreen();
@@ -114,12 +120,29 @@ void application::updateGraphicsFull() {
 
 void application::updateGraphicsPartial(){
 	// do it off the list of committed memory / updated pixels
+		// is this neccesary? I think the updateGraphicsFull() is fast enough to just use
 }
 
 bool application::update() {
 	// construct the list of updated fields - SDL_Rect for each bit
 	// and then update the texture with SDL_RenderFillRects
-	updateGraphicsPartial();
+	// updateGraphicsPartial();
+
+	// gives it something new to show
+	// for ( int i = 0; i < ram_size; i++ ) {
+	// 	m_ram[ i ] = rng();
+	// }
+
+	updateGraphicsFull();
+
+	static int prevTicks = 0;
+	int currTicks = SDL_GetTicks();
+	int timeSinceLastPass = currTicks - prevTicks;
+	if( timeSinceLastPass < 16 )
+		SDL_Delay( 16 - timeSinceLastPass );
+
+	std::cout << "\rTime since last frame: " << SDL_GetTicks() - prevTicks << "ms  " << std::flush;
+	prevTicks = currTicks;
 
 	SDL_Event event;
 	while ( SDL_PollEvent( &event ) ) {

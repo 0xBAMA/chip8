@@ -19,6 +19,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <chrono>
 
 constexpr int vregister_size = 16;
 constexpr int stack_size = 16;
@@ -26,6 +27,10 @@ constexpr int bufferHeight = 32;
 constexpr int bufferWidth = 64;
 constexpr int ram_size = 0xF000;
 constexpr int pc_start = 0x200;
+
+// Window defines
+constexpr int windowWidth = 1280;
+constexpr int windowHeight = 800;
 
 struct graphicalOffsets_t {
 	// Program Counter
@@ -129,7 +134,7 @@ public:
 	void frameClear();
 
 	void tick();
-	uint8_t keyInput();
+	uint8_t keyInput(); // stalls until a key is pressed
 	uint16_t inputStateSinceLastFrame = 0;
 
 	// main loop for display
@@ -140,21 +145,19 @@ public:
 	void updateGraphicsPartial();
 	void updateGraphicsFull();
 	void clearDrawLists();
+	void drawBackground();
 	void addRectangle( bool bitState, SDL_Rect footprint );
 	graphicalOffsets_t go;
 
 	std::vector< SDL_Rect > drawListTrue;
 	std::vector< SDL_Rect > drawListFalse;
 
-	// pick events off the queue
-	void handleEvents();
-
-	// handle particular events - add to a queue to be returned by keyInput()
-	void handleEvent( uint8_t eventCode );
-
 	// SDL Resource Handles
 	SDL_Window* window;
 	SDL_Renderer* renderer;
+	SDL_Texture* texture;
+
+	const char* windowTitle = "CHIP-8 Interpreter";
 
 	// program state
 	bool running;
