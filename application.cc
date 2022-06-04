@@ -1,13 +1,14 @@
 #include "application.h"
-#include <cstdlib>
-#include <cstring>
-#include <fstream>
-#include "time.h"
 
 // Window defines
-const int windowWidth = 1000;
-const int windowHeight = 500;
+const int windowWidth = 1280;
+const int windowHeight = 800;
 const char* windowTitle = "CHIP-8 Interpreter";
+
+uint8_t application::rng(){
+	std::uniform_int_distribution< uint8_t > dist( 0, 255 );
+	return dist( *gen );
+}
 
 application::application() {
 	// SDL Initialization
@@ -16,38 +17,55 @@ application::application() {
 	renderer = SDL_CreateRenderer( window, -1, 0 );
 	running = true;
 
-    // for seeding the rng, only used by Cxkk
-    srand(time(nullptr));
+	// copy the mockup to the renderer, as a background image ( titles, labels, etc )
+	SDL_Surface* image = IMG_Load( "memoryDisplay.png" );
+	SDL_Texture* texture = SDL_CreateTextureFromSurface( renderer, image );
+	SDL_Rect drawLocation = { 0, 0, windowWidth, windowHeight };
+	SDL_RenderCopyEx( renderer, texture, NULL, &drawLocation, 0.0f, NULL, SDL_FLIP_NONE );
 
-    // initializing addressable arrays
-    for (int i = 0; i < vregister_size; i++)
-        m_vregisters[i] = 0;
 
-    for (int i = 0; i < stack_size; i++)
-        m_address_stack[i] = 0;
+	// for seeding the rng, only used by Cxkk
+	// srand(time(nullptr)); // no
 
-    for (int row = 0; row < buffer_width; row++)
-        for (int col = 0; col < buffer_length; col++)
-            m_frame_buffer[row][col] = 0;
+	std::random_device rd;
+	std::seed_seq s{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() };
+	gen = std::make_shared< std::mt19937 >( s );
 
-    for (int i = 0; i < ram_size; i++)
-        m_ram[i] = 0;
 
-    // load font set into memory
-    std::memcpy(m_ram, m_font, 80);
-    m_index_register = 0;
-    m_program_counter = pc_start;
-    m_stack_pointer = 0;
-    m_delay_timer = 0;
-    m_sound_timer = 0;
-    m_ticks = 0;
-    m_file_length = 0;
+
+	// initializing addressable arrays
+	for ( int i = 0; i < vregister_size; i++ ) {
+		m_vregisters[ i ] = 0;
+	}
+
+	for ( int i = 0; i < stack_size; i++ ) {
+		m_address_stack[ i ] = 0;
+	}
+
+	for ( int row = 0; row < buffer_width; row++ ) {
+		for ( int col = 0; col < buffer_length; col++ ) {
+			m_frame_buffer[ row ][ col ] = 0;
+		}
+	}
+
+	for (int i = 0; i < ram_size; i++)
+	m_ram[i] = 0;
+
+	// load font set into memory
+	std::memcpy(m_ram, m_font, 80);
+	m_index_register = 0;
+	m_program_counter = pc_start;
+	m_stack_pointer = 0;
+	m_delay_timer = 0;
+	m_sound_timer = 0;
+	m_ticks = 0;
+	m_file_length = 0;
 }
 
 application::~application() {
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+	SDL_DestroyRenderer( renderer );
+	SDL_DestroyWindow( window );
+	SDL_Quit();
 }
 
 void application::loadRom(const std::string filename) {
@@ -82,9 +100,15 @@ void application::frameClear() {
 }
 
 bool application::update() {
-	static int i = 10;
+
+	SDL_RenderPresent( renderer );
+
+
+
+
+	static int i = 100;
 	SDL_Delay( 100 );
-	std::cout << i-- << std::endl;
+	std::cout << i-- << " " << int( rng() ) << " " << int( rng() ) << std::endl;
 	return !( i == 0 );
 }
 
@@ -177,6 +201,7 @@ void application::tick() {
             std::cout << "err: instruction not found for 0x8 op code." << "\n";
             break;
         };
+				break;
     case 0x9: // SkipNotEqual Vx, Vy
         if (m_vregisters[(instruction & 0x0F00) >> 8] != m_vregisters[(instruction & 0x00F0) >> 4])
             m_program_counter += 2;
@@ -187,10 +212,13 @@ void application::tick() {
     case 0xB: // JumP V0, addr
         m_program_counter = (instruction & 0x0FFF) + m_vregisters[0];
         break;
-    case 0xC: //RaNDom Vx, 
-        m_vregisters[(instruction & 0x0F00) >> 8] = (rand() % 256) & (instruction & 0x00FF);
+    case 0xC: //RaNDom Vx,
+        // m_vregisters[(instruction & 0x0F00) >> 8] = (rand() % 256) & (instruction & 0x00FF);
+
+					// implemented something with the function signature rng(), which will return a value 0-255
+
         break;
-    case 0xD: // DRaW Vx, Vy, nibble 
+    case 0xD: // DRaW Vx, Vy, nibble
         // not implemented
         break;
     case 0xE: // instrs Ex9E and ExA1 here
@@ -203,7 +231,7 @@ void application::tick() {
             break;
         case 0x0A: // LoaD Vx, K
             // implement keyInput
-            m_vregisters[(instruction & 0x0F00) >> 8] = keyInput();
+            // m_vregisters[(instruction & 0x0F00) >> 8] = keyInput(); // not yet implemented
             break;
         case 0x15: // LoaD DT, Vx
             m_delay_timer = m_vregisters[(instruction & 0x0F00) >> 8];
@@ -212,26 +240,30 @@ void application::tick() {
             m_sound_timer = m_vregisters[(instruction & 0x0F00) >> 8];
             break;
         case 0x1E: // ADD I, Vx
-            m_vregisters[0xF] = (m_index_register + m_vregisters[(instruction & 0x0F00) >> 8] & 0xFFFF0000) != 0;
-            m_index_register = m_index_register + m_vregisters[(instruction & 0x0F00) >> 8] & 0x0000FFFF;
+            // m_vregisters[0xF] = (m_index_register + m_vregisters[(instruction & 0x0F00) >> 8] & 0xFFFF0000) != 0; // add parenthesis
+            // m_index_register = m_index_register + m_vregisters[(instruction & 0x0F00) >> 8] & 0x0000FFFF; // add parenthesis
             break;
         case 0x29: // LoaD F, Vx
             m_index_register = m_vregisters[(instruction & 0x0F00) >> 8] * 5;
             break;
         case 0x33: // LoaD B, Vx
-            uint8_t vx = m_vregisters[(instruction & 0x0F00) >> 8];
-            m_ram[m_index_register] = (vx / 100) % 10;
-            m_ram[m_index_register + 1] = (vx / 10) % 10;
-            m_ram[m_index_register + 2] = vx % 10;
+						{
+							uint8_t vx = m_vregisters[(instruction & 0x0F00) >> 8];
+							m_ram[m_index_register] = (vx / 100) % 10;
+							m_ram[m_index_register + 1] = (vx / 10) % 10;
+							m_ram[m_index_register + 2] = vx % 10;
+						}
             break;
         case 0x55: // LoaD [I], Vx
-            for (int i = 0; i < ((instruction & 0x0F00) >> 8); i++)
-                m_ram[m_index_register + i] = m_vregisters[i];
+            for ( int i = 0; i < ( ( instruction & 0x0F00 ) >> 8 ); i++ ) {
+							m_ram[ m_index_register + i ] = m_vregisters[ i ];
+						}
             m_index_register += ((instruction & 0x0F00) >> 8) + 1;
             break;
         case 0x65: // LoaD Vx, [I]
-            for (int i = 0; i < ((instruction & 0x0F00) >> 8); i++)
-                m_vregisters[i] = m_ram[m_index_register + i];
+            for (int i = 0; i < ((instruction & 0x0F00) >> 8); i++) {
+							m_vregisters[i] = m_ram[m_index_register + i];
+						}
             m_index_register += ((instruction & 0x0F00) >> 8) + 1;
             break;
         default:

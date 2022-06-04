@@ -12,8 +12,12 @@
 #endif
 #undef unixcheck
 
-#include <cstdint>
+// #include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <random>
 #include <iostream>
+#include <memory>
 
 constexpr int vregister_size = 16;
 constexpr int stack_size = 16;
@@ -56,8 +60,11 @@ private:
 		0xF0, 0x80, 0x80, 0x80, 0xF0, // C
 		0xE0, 0x90, 0x90, 0x90, 0xE0, // D
 		0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-		0xF0, 0x80, 0xF0, 0x80, 0x80  // F 
+		0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 	};
+
+	std::shared_ptr< std::mt19937 > gen;
+	uint8_t rng(); // get a sample of the distribution
 
 public:
 	application();
