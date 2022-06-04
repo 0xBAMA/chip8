@@ -18,18 +18,71 @@
 #include <random>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 constexpr int vregister_size = 16;
 constexpr int stack_size = 16;
-constexpr int buffer_width = 32;
-constexpr int buffer_length = 64;
-constexpr int ram_size = 0xFFF;
+constexpr int bufferHeight = 32;
+constexpr int bufferWidth = 64;
+constexpr int ram_size = 0xF000;
 constexpr int pc_start = 0x200;
+
+struct graphicalOffsets_t {
+	// Program Counter
+	const int PCBaseX = 174;
+	const int PCBaseY = 488;
+	const int PCBoxDim = 16;
+	const int PCOffset = 2;
+
+	// Registers
+	const int RBaseX = 177;
+	const int RBaseY = 524;
+	const int RBoxDim = 8;
+	const int ROffset = 2;
+
+	// Timers
+	const int TBaseX = 177;
+	const int TBaseY = 700;
+	const int TBoxDim = 8;
+	const int TOffset = 2;
+
+	// Stack
+	const int SBaseX = 300;
+	const int SBaseY = 524;
+	const int SBoxDim = 8;
+	const int SOffset = 2;
+
+	// Stack Pointer
+	const int SPBaseX = 300;
+	const int SPBaseY = 699;
+	const int SPBoxDim = 8;
+	const int SPOffset = 2;
+
+	// Input State
+	const int IBaseX = 485;
+	const int IBaseY = 497;
+	const int IBoxDim = 36;
+	const int IOffsetX = 11;
+	const int IOffsetY = 17;
+
+	// Screen
+	const int SCRBaseX = 20;
+	const int SCRBaseY = 19;
+	const int SCRBoxDim = 11;
+	const int SCROffset = 2;
+
+	// Memory
+	const int MBaseX = 869;
+	const int MBaseY = 19;
+	const int MBoxDim = 2;
+	const int MOffset = 1;
+	const int MColOffset = 25;
+};
 
 class application {
 private:
 	// registers
-	uint8_t m_vregisters[vregister_size];
+	uint8_t m_vregisters[ vregister_size ];
 	uint16_t m_index_register;
 	uint16_t m_program_counter;
 	uint8_t m_stack_pointer;
@@ -37,14 +90,14 @@ private:
 	uint8_t m_sound_timer;
 
 	// addressable arrays
-	uint16_t m_address_stack[stack_size];
-	uint8_t m_frame_buffer[buffer_width][buffer_length];
-	uint8_t m_ram[ram_size];
+	uint16_t m_address_stack[ stack_size ];
+	uint8_t m_frame_buffer[ bufferWidth * bufferHeight ];
+	uint8_t m_ram[ ram_size ];
 
 	int m_ticks;
 	int m_file_length;
 
-	uint8_t m_font[80] = {
+	uint8_t m_font[ 80 ] = {
 		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1
 		0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -77,14 +130,26 @@ public:
 
 	void tick();
 	uint8_t keyInput();
+	uint16_t inputStateSinceLastFrame = 0;
 
-	// main loop
+	// main loop for display
 	bool update();
+	void updateRegisters();
+	void updateScreen();
+	void updateMemory();
+	void updateGraphicsPartial();
+	void updateGraphicsFull();
+	void clearDrawLists();
+	void addRectangle( bool bitState, SDL_Rect footprint );
+	graphicalOffsets_t go;
+
+	std::vector< SDL_Rect > drawListTrue;
+	std::vector< SDL_Rect > drawListFalse;
 
 	// pick events off the queue
 	void handleEvents();
 
-	// handle particular events
+	// handle particular events - add to a queue to be returned by keyInput()
 	void handleEvent( uint8_t eventCode );
 
 	// SDL Resource Handles

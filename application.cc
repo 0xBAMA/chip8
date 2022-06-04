@@ -5,12 +5,50 @@ const int windowWidth = 1280;
 const int windowHeight = 800;
 const char* windowTitle = "CHIP-8 Interpreter";
 
-uint8_t application::rng(){
+uint8_t application::rng(){ // query for a random value 0-255
 	std::uniform_int_distribution< uint8_t > dist( 0, 255 );
 	return dist( *gen );
 }
 
 application::application() {
+	// create the rng object
+	std::random_device rd;
+	std::seed_seq s{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() };
+	gen = std::make_shared< std::mt19937 >( s );
+
+	// initializing addressable arrays
+	for ( int i = 0; i < vregister_size; i++ ) {
+		// m_vregisters[ i ] = 0;
+		m_vregisters[ i ] = rng(); // some bullshit value to visualize
+	}
+
+	for ( int i = 0; i < stack_size; i++ ) {
+		// m_address_stack[ i ] = 0;
+		m_address_stack[ i ] = i; // some nonzero init ...
+	}
+
+	for ( int y = 0; y < bufferHeight; y++ ) {
+		for ( int x = 0; x < bufferWidth; x++ ) {
+			// a uint8_t per pixel wastes 7 bits but we're not hurting for memory so it's probably not important for this implementation
+			m_frame_buffer[ x + y * bufferWidth ] = 0;
+		}
+	}
+
+	for ( int i = 0; i < ram_size; i++ ) {
+		m_ram[ i ] = 0;
+	}
+
+	// load font set into memory
+	std::memcpy( m_ram, m_font, 80 );
+	m_index_register = 0;
+	m_program_counter = pc_start;
+	m_stack_pointer = 16;
+	m_delay_timer = 0;
+	m_sound_timer = 0;
+	m_ticks = 0;
+	m_file_length = 0;
+
+
 	// SDL Initialization
 	SDL_Init( SDL_INIT_EVERYTHING );
 	window = SDL_CreateWindow( windowTitle, 0, 0, windowWidth, windowHeight, SDL_WINDOW_SHOWN );
@@ -23,43 +61,8 @@ application::application() {
 	SDL_Rect drawLocation = { 0, 0, windowWidth, windowHeight };
 	SDL_RenderCopyEx( renderer, texture, NULL, &drawLocation, 0.0f, NULL, SDL_FLIP_NONE );
 
-
-	// for seeding the rng, only used by Cxkk
-	// srand(time(nullptr)); // no
-
-	std::random_device rd;
-	std::seed_seq s{ rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd() };
-	gen = std::make_shared< std::mt19937 >( s );
-
-
-
-	// initializing addressable arrays
-	for ( int i = 0; i < vregister_size; i++ ) {
-		m_vregisters[ i ] = 0;
-	}
-
-	for ( int i = 0; i < stack_size; i++ ) {
-		m_address_stack[ i ] = 0;
-	}
-
-	for ( int row = 0; row < buffer_width; row++ ) {
-		for ( int col = 0; col < buffer_length; col++ ) {
-			m_frame_buffer[ row ][ col ] = 0;
-		}
-	}
-
-	for (int i = 0; i < ram_size; i++)
-	m_ram[i] = 0;
-
-	// load font set into memory
-	std::memcpy(m_ram, m_font, 80);
-	m_index_register = 0;
-	m_program_counter = pc_start;
-	m_stack_pointer = 0;
-	m_delay_timer = 0;
-	m_sound_timer = 0;
-	m_ticks = 0;
-	m_file_length = 0;
+	// put initial state of the virtual machine in the display
+	updateGraphicsFull();
 }
 
 application::~application() {
@@ -75,7 +78,7 @@ void application::loadRom(const std::string filename) {
         m_file_length = file.tellg();
         file.seekg(0, file.beg);
 
-        if (m_file_length > (0xFFF - 0x200))
+        if (m_file_length > (0xF000 - 0x200))
             throw std::runtime_error("Could not load file, file is too large.");
         else if (m_file_length == 0)
             throw std::runtime_error("Empty file.");
@@ -94,22 +97,11 @@ void application::clearRom() {
 }
 
 void application::frameClear() {
-    for (int i = 0; i < buffer_width; i++)
-        for (int j = 0; j < buffer_length; j++)
-            m_frame_buffer[i][j] = 0;
-}
-
-bool application::update() {
-
-	SDL_RenderPresent( renderer );
-
-
-
-
-	static int i = 100;
-	SDL_Delay( 100 );
-	std::cout << i-- << " " << int( rng() ) << " " << int( rng() ) << std::endl;
-	return !( i == 0 );
+	for ( int x = 0; x < bufferWidth; x++ ) {
+		for ( int y = 0; y < bufferHeight; y++ ) {
+			m_frame_buffer[ x + y * bufferWidth ] = 0;
+		}
+	}
 }
 
 /*
@@ -213,13 +205,11 @@ void application::tick() {
         m_program_counter = (instruction & 0x0FFF) + m_vregisters[0];
         break;
     case 0xC: //RaNDom Vx,
-        // m_vregisters[(instruction & 0x0F00) >> 8] = (rand() % 256) & (instruction & 0x00FF);
-
-					// implemented something with the function signature rng(), which will return a value 0-255
-
+        m_vregisters[(instruction & 0x0F00) >> 8] = rng() & (instruction & 0x00FF);
         break;
     case 0xD: // DRaW Vx, Vy, nibble
         // not implemented
+					// add touched pixels to drawlist
         break;
     case 0xE: // instrs Ex9E and ExA1 here
         // not implemented
@@ -247,7 +237,7 @@ void application::tick() {
             m_index_register = m_vregisters[(instruction & 0x0F00) >> 8] * 5;
             break;
         case 0x33: // LoaD B, Vx
-						{
+						{ // scoped because of variable declaration
 							uint8_t vx = m_vregisters[(instruction & 0x0F00) >> 8];
 							m_ram[m_index_register] = (vx / 100) % 10;
 							m_ram[m_index_register + 1] = (vx / 10) % 10;
