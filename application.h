@@ -12,21 +12,22 @@
 #endif
 #undef unixcheck
 
-// #include <cstdint>
+#include <chrono>
 #include <cstring>
 #include <fstream>
-#include <random>
 #include <iostream>
 #include <memory>
+#include <random>
+#include <unordered_map>
 #include <vector>
-#include <chrono>
 
-constexpr int vregister_size = 16;
-constexpr int stack_size = 16;
+
+constexpr int vregisterSize = 16;
+constexpr int stackSize = 16;
 constexpr int bufferHeight = 32;
 constexpr int bufferWidth = 64;
-constexpr int ram_size = 0xF000;
-constexpr int pc_start = 0x200;
+constexpr int ramSize = 0xF000;
+constexpr int pcStart = 0x200;
 
 // Window defines
 constexpr int windowWidth = 1280;
@@ -84,25 +85,37 @@ struct graphicalOffsets_t {
 	const int MColOffset = 25;
 };
 
+struct AudioData {
+	Uint8* position;
+	Uint32 length;
+};
+
 class application {
 private:
 	// registers
-	uint8_t m_vregisters[ vregister_size ];
-	uint16_t m_index_register;
-	uint16_t m_program_counter;
-	uint8_t m_stack_pointer;
-	uint8_t m_delay_timer;
-	uint8_t m_sound_timer;
+	uint8_t vregisters[ vregisterSize ];
+	uint16_t indexRegister;
+	uint16_t programCounter;
+	uint8_t stackPointer;
+	uint8_t delayTimer;
+	uint8_t soundTimer;
 
 	// addressable arrays
-	uint16_t m_address_stack[ stack_size ];
-	uint8_t m_frame_buffer[ bufferWidth * bufferHeight ];
-	uint8_t m_ram[ ram_size ];
+	uint16_t addressStack[ stackSize ];
+	uint8_t frameBuffer[ bufferWidth * bufferHeight ];
+	uint8_t ram[ ramSize ];
 
-	int m_ticks;
-	int m_file_length;
+	int ticks;
+	int fileLength;
 
-	uint8_t m_font[ 80 ] = {
+	std::unordered_map< int, SDL_Scancode > keymap = { 
+		{ 0x1, SDL_SCANCODE_1 }, { 0x2, SDL_SCANCODE_2 }, { 0x3, SDL_SCANCODE_3 }, { 0xC, SDL_SCANCODE_4 },
+		{ 0x4, SDL_SCANCODE_Q }, { 0x5, SDL_SCANCODE_W }, { 0x6, SDL_SCANCODE_E }, { 0xD, SDL_SCANCODE_R },
+		{ 0x7, SDL_SCANCODE_A }, { 0x8, SDL_SCANCODE_S }, { 0x9, SDL_SCANCODE_D }, { 0xE, SDL_SCANCODE_F },
+		{ 0xA, SDL_SCANCODE_Z }, { 0x0, SDL_SCANCODE_X }, { 0xB, SDL_SCANCODE_C }, { 0xF, SDL_SCANCODE_V },
+	};
+
+	uint8_t font[ 80 ] = {
 		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1
 		0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -121,6 +134,7 @@ private:
 		0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 	};
 
+
 	std::shared_ptr< std::mt19937 > gen;
 	uint8_t rng(); // get a sample of the distribution
 
@@ -128,7 +142,7 @@ public:
 	application();
 	~application();
 
-	void loadRom(const std::string filename);
+	void loadRom( const std::string filename );
 	void clearRom();
 
 	void frameClear();
@@ -136,6 +150,7 @@ public:
 	void tick();
 	uint8_t keyInput(); // stalls until a key is pressed
 	uint16_t inputStateSinceLastFrame = 0;
+	void play(); // plays a beep for the sound timer
 
 	// main loop for display
 	bool update();
