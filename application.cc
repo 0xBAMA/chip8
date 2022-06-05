@@ -19,7 +19,7 @@ application::application() {
 
 	for ( int i = 0; i < stackSize; i++ ) {
 		// addressStack[ i ] = 0;
-		addressStack[ i ] = i; // some nonzero init ...
+		addressStack[ i ] = i; // some nonzero
 	}
 
 	for ( int y = 0; y < bufferHeight; y++ ) {
@@ -43,6 +43,8 @@ application::application() {
 	ticks = 0;
 	fileLength = 0;
 
+
+	loadRom("roms/Biorhythm [Jef Winsor].ch8");
 
 	// SDL Initialization
 	SDL_Init( SDL_INIT_EVERYTHING );
@@ -153,7 +155,7 @@ uint8_t application::keyInput() {
 	// while it is waiting
 }
 
-void application::play() {
+void application::playSound() {
 
 }
 
@@ -169,10 +171,6 @@ void application::tick() {
 	uint16_t instruction = ram[ programCounter ] << 8 | ram[ programCounter + 1 ];
 	programCounter += 2;
 
-	if (soundTimer > 0) {
-		play();
-		soundTimer--;
-	}
 	/* TODO
 	better errors
 	implement drawing
@@ -273,7 +271,7 @@ void application::tick() {
 		case 0x9E: // Skip if keymap[Vx] is down
 			{
 				const Uint8* state = SDL_GetKeyboardState(NULL);
-				
+
 				if ( state[ vregisters[ ( instruction & 0x0F00 ) >> 8 ] ] )
 					programCounter += 2;
 			}
@@ -281,7 +279,7 @@ void application::tick() {
 		case 0xA1: // Skip if keymap[Vx] is up
 			{
 			const Uint8* state = SDL_GetKeyboardState(NULL);
-				
+
 				if ( !state[ vregisters[ ( instruction & 0x0F00 ) >> 8 ] ] )
 					programCounter += 2;
 			}

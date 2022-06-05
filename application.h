@@ -108,7 +108,7 @@ private:
 	int ticks;
 	int fileLength;
 
-	std::unordered_map< int, SDL_Scancode > keymap = { 
+	std::unordered_map< int, SDL_Scancode > keymap = {
 		{ 0x1, SDL_SCANCODE_1 }, { 0x2, SDL_SCANCODE_2 }, { 0x3, SDL_SCANCODE_3 }, { 0xC, SDL_SCANCODE_4 },
 		{ 0x4, SDL_SCANCODE_Q }, { 0x5, SDL_SCANCODE_W }, { 0x6, SDL_SCANCODE_E }, { 0xD, SDL_SCANCODE_R },
 		{ 0x7, SDL_SCANCODE_A }, { 0x8, SDL_SCANCODE_S }, { 0x9, SDL_SCANCODE_D }, { 0xE, SDL_SCANCODE_F },
@@ -150,14 +150,13 @@ public:
 	void tick();
 	uint8_t keyInput(); // stalls until a key is pressed
 	uint16_t inputStateSinceLastFrame = 0;
-	void play(); // plays a beep for the sound timer
+	void playSound(); // plays a beep for the sound timer
 
 	// main loop for display
 	bool update();
 	void updateRegisters();
 	void updateScreen();
 	void updateMemory();
-	void updateGraphicsPartial();
 	void updateGraphicsFull();
 	void clearDrawLists();
 	void drawBackground();
