@@ -80,8 +80,7 @@ void application::loadRom( const std::string filename ) {
 
 		file.read( ( char* )ram + pcStart, fileLength );
 		file.close();
-	}
-	else {
+	} else {
 		throw std::runtime_error( "Could not open file." );
 	}
 }
@@ -92,11 +91,25 @@ void application::clearRom() {
 }
 
 void application::frameClear() {
-	for ( int x = 0; x < bufferWidth; x++ ) {
-		for ( int y = 0; y < bufferHeight; y++ ) {
+	for ( int y = 0; y < bufferHeight; y++ ) {
+		for ( int x = 0; x < bufferWidth; x++ ) {
 			frameBuffer[ x + y * bufferWidth ] = 0;
 		}
 	}
+}
+
+int application::findKey( SDL_Scancode sc ) {
+	for ( auto &it : keymap )
+		if ( it.second == sc )
+			return it.first;
+	return -1;
+}
+
+bool application::containsKey(int keyByte) {
+	for ( auto &it : keymap )
+		if ( it.first == keyByte )
+			return true;
+	return false;
 }
 
 uint8_t application::keyInput() {
@@ -112,42 +125,13 @@ uint8_t application::keyInput() {
 	+---+---+---+---+       +---+---+---+---+
 	| A | 0 | B | F |       | z | x | c | v |
 	+---+---+---+---+       +---+---+---+---+
-	*/
+	*/	
 	while ( !gotOne ) {
 		SDL_Event event;
 		while ( SDL_PollEvent( &event ) ) {
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_1 )
-				return 0x1;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_2 )
-				return 0x2;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_3 )
-				return 0x3;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_4 )
-				return 0xC;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_q )
-				return 0x4;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_w )
-				return 0x5;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_e )
-				return 0x6;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_r )
-				return 0xD;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_a )
-				return 0x7;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_s )
-				return 0x8;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_d )
-				return 0x9;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_f )
-				return 0xE;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_z )
-				return 0xA;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_x )
-				return 0x0;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_c )
-				return 0xB;
-			if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_v )
-				return 0xF;
+			int keyByte = findKey( event.key.keysym.scancode );
+			if ( event.type == SDL_KEYUP && containsKey( keyByte ))
+				return keyByte;
 		}
 	}
 	// maybe add a check for escape here, so that you can still abort while this loop waits
@@ -156,7 +140,7 @@ uint8_t application::keyInput() {
 }
 
 void application::playSound() {
-
+	std::cout << "my dick and balls" << "\n";
 }
 
 /*
@@ -264,7 +248,7 @@ void application::tick() {
 		break;
 	case 0xD: // DRaW Vx, Vy, nibble
 		// not implemented
-					// add touched pixels to drawlist
+		// add touched pixels to drawlist
 		break;
 	case 0xE:
 		switch ( instruction & 0x00FF ) {
@@ -272,15 +256,15 @@ void application::tick() {
 			{
 				const Uint8* state = SDL_GetKeyboardState(NULL);
 
-				if ( state[ vregisters[ ( instruction & 0x0F00 ) >> 8 ] ] )
+				if ( state[ keymap[ vregisters[ ( instruction & 0x0F00 ) >> 8 ] ] ] )
 					programCounter += 2;
 			}
 			break;
 		case 0xA1: // Skip if keymap[Vx] is up
 			{
-			const Uint8* state = SDL_GetKeyboardState(NULL);
+				const Uint8* state = SDL_GetKeyboardState(NULL);
 
-				if ( !state[ vregisters[ ( instruction & 0x0F00 ) >> 8 ] ] )
+				if ( !state[ keymap[ vregisters[ ( instruction & 0x0F00 ) >> 8 ] ] ] )
 					programCounter += 2;
 			}
 			break;

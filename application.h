@@ -148,6 +148,8 @@ public:
 	void frameClear();
 
 	void tick();
+	int findKey( SDL_Scancode sc );
+	bool containsKey( int keyByte );
 	uint8_t keyInput(); // stalls until a key is pressed
 	uint16_t inputStateSinceLastFrame = 0;
 	void playSound(); // plays a beep for the sound timer

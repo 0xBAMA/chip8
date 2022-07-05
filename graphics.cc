@@ -18,7 +18,7 @@ void application::updateRegisters() {
 	for ( int i = 0; i < 16; i++ ) {
 		SDL_Rect drawPosition = { go.PCBaseX + i * ( go.PCBoxDim + go.PCOffset ),
 			go.PCBaseY, go.PCBoxDim, go.PCBoxDim };
-		addRectangle( bool( m_program_counter >> ( 15 - i ) & 1 ), drawPosition );
+		addRectangle( bool( programCounter >> ( 15 - i ) & 1 ), drawPosition );
 	}
 
 	// v registers ( 16x 8-bit values )
@@ -26,7 +26,7 @@ void application::updateRegisters() {
 		for ( int j = 0; j < 8; j++ ) {
 			SDL_Rect drawPosition = { go.RBaseX + j * ( go.RBoxDim + go.ROffset ),
 				go.RBaseY + i * ( go.RBoxDim + go.ROffset ), go.RBoxDim, go.RBoxDim };
-			addRectangle( bool( m_vregisters[ i ] >> ( 7 - j ) & 1 ), drawPosition );
+			addRectangle( bool( vregisters[ i ] >> ( 7 - j ) & 1 ), drawPosition );
 		}
 	}
 
@@ -34,9 +34,9 @@ void application::updateRegisters() {
 	for ( int i = 0; i < 8; i++ ) {
 		SDL_Rect drawPosition = { go.TBaseX + i * ( go.TBoxDim + go.TOffset ),
 			go.TBaseY, go.TBoxDim, go.TBoxDim };
-		addRectangle( bool( m_delay_timer >> ( 7 - i ) & 1 ), drawPosition );
+		addRectangle( bool( delayTimer >> ( 7 - i ) & 1 ), drawPosition );
 		drawPosition.y += ( go.TBoxDim + go.TOffset );
-		addRectangle( bool( m_sound_timer >> ( 7 - i ) & 1 ), drawPosition );
+		addRectangle( bool( soundTimer >> ( 7 - i ) & 1 ), drawPosition );
 	}
 
 	// stack entries
@@ -44,8 +44,8 @@ void application::updateRegisters() {
 		for ( int j = 0; j < 16; j++ ) {
 			SDL_Rect drawPosition = { go.SBaseX + j * ( go.SBoxDim + go.SOffset ),
 				go.SBaseY + i * ( go.SBoxDim + go.SOffset ), go.SBoxDim, go.SBoxDim };
-			if ( i <= m_stack_pointer ){
-				addRectangle( bool( m_address_stack[ i ] >> ( 15 - j ) & 1 ), drawPosition );
+			if ( i <= stackPointer ){
+				addRectangle( bool( addressStack[ i ] >> ( 15 - j ) & 1 ), drawPosition );
 			} else { // zeroed out if greater than the value of the stack pointer
 				addRectangle( false, drawPosition );
 			}
@@ -56,7 +56,7 @@ void application::updateRegisters() {
 	for ( int i = 0; i < 8; i++ ) {
 		SDL_Rect drawPosition = { go.SPBaseX + i * ( go.SPBoxDim + go.SPOffset ),
 			go.SPBaseY, go.SPBoxDim, go.SPBoxDim };
-		addRectangle( bool( m_stack_pointer >> ( 7 - i ) & 1 ), drawPosition );
+		addRectangle( bool( stackPointer >> ( 7 - i ) & 1 ), drawPosition );
 	}
 
 	// input state
@@ -75,7 +75,7 @@ void application::updateScreen() {
 		for ( int y = 0; y < bufferHeight; y++ ) {
 			SDL_Rect drawPosition = { go.SCRBaseX + x * ( go.SCRBoxDim + go.SCROffset ),
 				go.SCRBaseY + y * ( go.SCRBoxDim + go.SCROffset ), go.SCRBoxDim, go.SCRBoxDim };
-			addRectangle( bool( m_frame_buffer[ x + y * bufferWidth ] ), drawPosition );
+			addRectangle( bool( frameBuffer[ x + y * bufferWidth ] ), drawPosition );
 		}
 	}
 }
@@ -87,7 +87,7 @@ void application::updateMemory() {
 			for ( int bit = 0; bit < 8; bit++ ) {
 				SDL_Rect drawPosition = { go.MBaseX + bit * ( go.MBoxDim + go.MOffset ) + column * go.MColOffset,
 					go.MBaseY + row * ( go.MBoxDim + go.MOffset ), go.MBoxDim, go.MBoxDim };
-				addRectangle( bool( m_ram[ row + 256 * column ] >> ( 7 - bit ) & 1 ), drawPosition );
+				addRectangle( bool( ram[ row + 256 * column ] >> ( 7 - bit ) & 1 ), drawPosition );
 			}
 		}
 	}
