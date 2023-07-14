@@ -9,6 +9,7 @@
 	#define SDL_MAIN_HANDLED
 	#include <SDL.h>
 	#include <SDL_image.h>
+	#include <windows.h>
 #endif
 #undef unixcheck
 
@@ -26,7 +27,7 @@ constexpr int vregisterSize = 16;
 constexpr int stackSize = 16;
 constexpr int bufferHeight = 32;
 constexpr int bufferWidth = 64;
-constexpr int ramSize = 0xF000;
+constexpr int ramSize = 0x1000;
 constexpr int pcStart = 0x200;
 
 // Window defines
@@ -107,6 +108,13 @@ private:
 
 	int ticks;
 	int fileLength;
+
+	std::vector< SDL_Scancode > keys = {
+		SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
+		SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R,
+		SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F,
+		SDL_SCANCODE_Z, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_V
+	};
 
 	std::unordered_map< int, SDL_Scancode > keymap = {
 		{ 0x1, SDL_SCANCODE_1 }, { 0x2, SDL_SCANCODE_2 }, { 0x3, SDL_SCANCODE_3 }, { 0xC, SDL_SCANCODE_4 },

@@ -1,8 +1,8 @@
 #include "application.h"
 
 uint8_t application::rng() { // query for a random value 0-255
-	std::uniform_int_distribution< uint8_t > dist( 0, 255 );
-	return dist( *gen );
+	std::uniform_int_distribution< unsigned int > dist( 0, 255 );
+	return ( uint8_t )dist( *gen );
 }
 
 application::application() {
@@ -13,13 +13,13 @@ application::application() {
 
 	// initializing addressable arrays
 	for ( int i = 0; i < vregisterSize; i++ ) {
-		// vregisters[ i ] = 0;
-		vregisters[ i ] = rng(); // some bullshit value to visualize
+		 vregisters[ i ] = 0;
+		//vregisters[ i ] = rng(); // some bullshit value to visualize
 	}
 
 	for ( int i = 0; i < stackSize; i++ ) {
-		// addressStack[ i ] = 0;
-		addressStack[ i ] = i; // some nonzero
+		 addressStack[ i ] = 0;
+		//addressStack[ i ] = i; // some nonzero
 	}
 
 	for ( int y = 0; y < bufferHeight; y++ ) {
@@ -37,14 +37,12 @@ application::application() {
 	std::memcpy( ram, font, 80 );
 	indexRegister = 0;
 	programCounter = pcStart;
-	stackPointer = 16;
+	stackPointer = 0;
 	delayTimer = 0;
 	soundTimer = 0;
 	ticks = 0;
 	fileLength = 0;
 
-
-	loadRom("roms/Biorhythm [Jef Winsor].ch8");
 
 	// SDL Initialization
 	SDL_Init( SDL_INIT_EVERYTHING );
@@ -68,7 +66,7 @@ application::~application() {
 
 void application::loadRom( const std::string filename ) {
 	std::ifstream file( filename, std::fstream::binary );
-	if (!file.is_open()) {
+	if ( file.is_open() ) {
 		file.seekg( 0, file.end );
 		fileLength = file.tellg();
 		file.seekg( 0, file.beg );
@@ -130,8 +128,11 @@ uint8_t application::keyInput() {
 		SDL_Event event;
 		while ( SDL_PollEvent( &event ) ) {
 			int keyByte = findKey( event.key.keysym.scancode );
-			if ( event.type == SDL_KEYUP && containsKey( keyByte ))
+			if ( event.type == SDL_KEYUP && containsKey( keyByte ) ) {
 				return keyByte;
+			} else if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_ESCAPE ) {
+				return -1;
+			}
 		}
 	}
 	// maybe add a check for escape here, so that you can still abort while this loop waits
@@ -140,7 +141,7 @@ uint8_t application::keyInput() {
 }
 
 void application::playSound() {
-	std::cout << "my dick and balls" << "\n";
+	Beep(500, 500);
 }
 
 /*
@@ -153,110 +154,126 @@ kk or byte - An 8-bit value, the lowest 8 bits of the instruction
 void application::tick() {
 	// shift the first 8bit val into the higher values of instruction, OR the second 8bit val to build the instruction
 	uint16_t instruction = ram[ programCounter ] << 8 | ram[ programCounter + 1 ];
+	uint8_t op = (instruction & 0xF000) >> 12;
+	uint16_t nnn = instruction & 0x0FFF;
+	uint8_t n = instruction & 0x000F;
+	uint8_t x = (instruction & 0x0F00) >> 8;
+	uint8_t y = (instruction & 0x00F0) >> 4;
+	uint8_t kk = instruction & 0x00FF;
 	programCounter += 2;
 
 	/* TODO
 	better errors
-	implement drawing
 	rewrite instruction documentation
 	*/
 
 	// op code names are written out with the capital letters being those of the respective abbreviated name i.e. JP == JumP
-	switch ( instruction & 0xF000 >> 12 ) {
+	switch ( op ) {
 	case 0x0:
 		if ( instruction == 0x00E0 ) //CLearScreen
 			frameClear();
 		else // RETurn
-			programCounter = addressStack[ --stackPointer ];
+			programCounter = addressStack[ --stackPointer ];	
 		break;
 	case 0x1: // JumP addr
-		programCounter = instruction & 0x0FFF;
+		programCounter = nnn;
 		break;
 	case 0x2: // CALL addr
 		addressStack[ stackPointer++ ] = programCounter;
-		programCounter = instruction & 0x0FFF;
+		programCounter = nnn;
 		break;
 	case 0x3: // SkipEqual Vx, byte
-		if ( vregisters[ ( instruction & 0x0F00 ) >> 8 ] == ( instruction & 0x00FF ) )
+		if ( vregisters[ x ] == kk )
 			programCounter += 2;
 		break;
 	case 0x4: // SkipNotEqual Vx, byte
-		if ( vregisters[ ( instruction & 0x0F00 ) >> 8 ] != ( instruction & 0x00FF ) )
+		if ( vregisters[ x ] != kk )
 			programCounter += 2;
 		break;
 	case 0x5: // SkipEqual Vx, Vy
-		if (vregisters[ ( instruction & 0x0F00 ) >> 8 ] == vregisters[ ( instruction & 0x00F0 ) >> 4 ] )
+		if (vregisters[ x ] == vregisters[ y ] )
 			programCounter += 2;
 		break;
 	case 0x6: // LoaD Vx, byte
-		vregisters[ ( instruction & 0x0F00 ) >> 8 ] = instruction & 0x00FF;
+		vregisters[ x ] = kk;
 		break;
 	case 0x7: // ADD Vx, byte
-		vregisters[ ( instruction & 0x0F00 ) >> 8 ] += instruction & 0x00FF;
+		vregisters[ x ] += kk;
 		break;
 	case 0x8:
-		switch ( instruction & 0x000F ) {
+		switch ( n ) {
 		case 0x0: // LoaD Vx, Vy
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] = vregisters[ ( instruction & 0x00F0 ) >> 4 ];
+			vregisters[ x ] = vregisters[ y ];
 			break;
 		case 0x1: // OR Vx, Vy
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] |= vregisters[ ( instruction & 0x00F0 ) >> 4 ];
+			vregisters[ x ] |= vregisters[ y ];
 			break;
 		case 0x2: // AND Vx, Vy
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] &= vregisters[ ( instruction & 0x00F0 ) >> 4 ];
+			vregisters[ x ] &= vregisters[ y ];
 			break;
 		case 0x3: // XOR Vx, Vy
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] ^= vregisters[ ( instruction & 0x00F0 ) >> 4 ];
+			vregisters[ x ] ^= vregisters[ y ];
 			break;
 		case 0x4: // ADD Vx, Vy
-			vregisters[ 0xF ] = ( ( int )vregisters[ ( instruction & 0x0F00 ) >> 8 ] + ( int )vregisters[ ( instruction & 0x00F0 ) >> 4 ] ) > 255;
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] += vregisters[(instruction & 0x00F0) >> 4];
+			vregisters[ 0xF ] = ( ( int )vregisters[ x ] + ( int )vregisters[ y ] ) > 255;
+			vregisters[ x ] += vregisters[y];
 			break;
 		case 0x5: // SUBtract Vx, Vy
-			vregisters[ 0xF ] = vregisters[ ( instruction & 0x0F00 ) >> 8 ] > vregisters[ ( instruction & 0x00F0 ) >> 4 ];
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] -= vregisters[ ( instruction & 0x00F0 ) >> 4 ];
+			vregisters[ 0xF ] = vregisters[ x ] > vregisters[ y ];
+			vregisters[ x ] -= vregisters[ y ];
 			break;
 		case 0x6: // SHiftRight Vx {, Vy}
-			vregisters[ 0xF ] = ( vregisters[ ( instruction & 0x0F00 ) >> 8 ] & 0b00000001 ) == 1;
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] >>= 1;
+			vregisters[ 0xF ] = ( vregisters[ x ] & 1 ) == 1;
+			vregisters[ x ] >>= 1;
 			break;
 		case 0x7: // SUBtractN Vx, Vy
-			vregisters[ 0xF ] = vregisters[ ( instruction & 0x00F0 ) >> 4 ] > vregisters[ ( instruction & 0x0F00 ) >> 8 ];
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] = vregisters[ ( instruction & 0x00F0 ) >> 4 ] - vregisters[ ( instruction & 0x0F00 ) >> 8 ];
+			vregisters[ 0xF ] = vregisters[ y ] > vregisters[ x ];
+			vregisters[ x ] = vregisters[ y ] - vregisters[ x ];
 			break;
 		case 0xE: // SHiftLeft Vx {, Vy}
-			vregisters[ 0xF ] = ( vregisters[ ( instruction & 0x0F00 ) >> 8 ] & 0b10000000 ) == 1;
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] <<= 1;
+			vregisters[ 0xF ] = ( vregisters[ x ] & 128 ) == 1;
+			vregisters[ x ] <<= 1;
 			break;
 		default:
-			std::cout << "err: instruction not found for 0x8 op code." << "\n";
+			throw std::runtime_error("err: instruction not found for 0x8 op code.");
 			break;
 		};
 		break;
 	case 0x9: // SkipNotEqual Vx, Vy
-		if ( vregisters[ ( instruction & 0x0F00 ) >> 8 ] != vregisters[ ( instruction & 0x00F0 ) >> 4 ] )
+		if ( vregisters[ x ] != vregisters[ y ] )
 			programCounter += 2;
 		break;
 	case 0xA: // LoaD I, addr
-		indexRegister = instruction & 0x0FFF;
+		indexRegister = n;
 		break;
 	case 0xB: // JumP V0, addr
-		programCounter = ( instruction & 0x0FFF ) + vregisters[ 0 ];
+		programCounter = nnn + vregisters[ 0 ];
 		break;
-	case 0xC: //RaNDom Vx,
-		vregisters[ ( instruction & 0x0F00 ) >> 8 ] = rng() & ( instruction & 0x00FF );
+	case 0xC: //RaNDom Vx, byte
+		vregisters[ x ] = rng() & kk;
 		break;
 	case 0xD: // DRaW Vx, Vy, nibble
-		// not implemented
-		// add touched pixels to drawlist
+		{
+			bool collision = false;
+			for ( int i = y; i < y + n; i++ ) {
+				uint8_t byte = ram[ indexRegister + i - y ];
+				for ( int j = x; j < x + 8; j++ ) {
+					uint8_t bit = byte >> 8 - ( j - x ) & 1;
+					if ( frameBuffer[ j % bufferWidth + i % bufferHeight * bufferWidth ] == 1 && bit == 1)
+						collision = true;
+					frameBuffer[ j % bufferWidth + i % bufferHeight * bufferWidth  ] ^= bit;
+				}
+			}
+			vregisters[ 0xF ] = collision ? 1 : 0;
+		}
 		break;
 	case 0xE:
-		switch ( instruction & 0x00FF ) {
+		switch ( kk ) {
 		case 0x9E: // Skip if keymap[Vx] is down
 			{
 				const Uint8* state = SDL_GetKeyboardState(NULL);
 
-				if ( state[ keymap[ vregisters[ ( instruction & 0x0F00 ) >> 8 ] ] ] )
+				if ( state[ keymap[ vregisters[ x ] ] ] )
 					programCounter += 2;
 			}
 			break;
@@ -264,62 +281,63 @@ void application::tick() {
 			{
 				const Uint8* state = SDL_GetKeyboardState(NULL);
 
-				if ( !state[ keymap[ vregisters[ ( instruction & 0x0F00 ) >> 8 ] ] ] )
+				if ( !state[ keymap[ vregisters[ x ] ] ] )
 					programCounter += 2;
 			}
 			break;
 		default:
-			std::cout << "could not find op code for 0xE instruction" << "\n";
+			throw std::runtime_error("could not find op code for 0xE instruction");
 			break;
 		}
 		break;
 	case 0xF:
-		switch ( instruction & 0x00FF ) {
+		switch ( kk ) {
 		case 0x07: // LoaD Vx, DT
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] = delayTimer;
+			vregisters[ x ] = delayTimer;
 			break;
 		case 0x0A: // LoaD Vx, K - wait for key event to occur
-			vregisters[ ( instruction & 0x0F00 ) >> 8 ] = keyInput();
+			vregisters[ x ] = keyInput();
 			break;
 		case 0x15: // LoaD DT, Vx
-			delayTimer = vregisters[ ( instruction & 0x0F00 ) >> 8 ];
+			delayTimer = vregisters[ x ];
 			break;
 		case 0x18: // LoaD ST, Vx
-			soundTimer = vregisters[ ( instruction & 0x0F00 ) >> 8 ];
+			soundTimer = vregisters[ x ];
 			break;
 		case 0x1E: // ADD I, Vx
-			 vregisters[ 0xF ] = ( indexRegister + vregisters[ ( instruction & 0x0F00 ) >> 8 ] & 0xFFFF0000 ) != 0;
-			 indexRegister = indexRegister + vregisters[ ( instruction & 0x0F00 ) >> 8 ] & 0x0000FFFF;
+			vregisters[ 0xF ] = ( indexRegister + vregisters[ x ] & 0xFFFF0000 ) != 0;
+			indexRegister = indexRegister + vregisters[ x ] & 0x0000FFFF;
 			break;
 		case 0x29: // LoaD F, Vx
-			indexRegister = vregisters[ ( instruction & 0x0F00 ) >> 8 ] * 5;
+			indexRegister = vregisters[ x ] * 5;
 			break;
 		case 0x33: // LoaD B, Vx
 			{ // scoped because of variable declaration
-				uint8_t vx = vregisters[ ( instruction & 0x0F00 ) >> 8 ];
+				uint8_t vx = vregisters[ x ];
 				ram[ indexRegister ] = ( vx / 100 ) % 10;
 				ram[ indexRegister + 1 ] = ( vx / 10 ) % 10;
 				ram[ indexRegister + 2 ] = vx % 10;
 			}
 			break;
 		case 0x55: // LoaD [I], Vx
-			for ( int i = 0; i < ( ( instruction & 0x0F00 ) >> 8 ); i++ ) {
+			for ( int i = 0; i < x; i++ ) {
 				ram[ indexRegister + i ] = vregisters[ i ];
 			}
-			indexRegister += ( ( instruction & 0x0F00 ) >> 8 ) + 1;
+			//indexRegister += x + 1;
 			break;
 		case 0x65: // LoaD Vx, [I]
-			for ( int i = 0; i < ((instruction & 0x0F00) >> 8); i++ ) {
+			for ( int i = 0; i < x; i++ ) {
 				vregisters[ i ] = ram[indexRegister + i];
 			}
-			indexRegister += ( ( instruction & 0x0F00 ) >> 8 ) + 1;
+			//indexRegister += x + 1;
 			break;
 		default:
-			std::cout << "error: instruction not found for 0xF op code." << '\n';
+			throw std::runtime_error("error: instruction not found for 0xF op code.");
 			break;
 		};
+		break;
 	default:
-		std::cout << "error: op code not found." << '\n';
+		throw std::runtime_error("error: op code not found.");
 		break;
 	};
 }

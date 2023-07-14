@@ -64,7 +64,9 @@ void application::updateRegisters() {
 		for ( int y = 0; y < 4; y++ ) {
 			SDL_Rect drawPosition = { go.IBaseX + x * ( go.IBoxDim + go.IOffsetX ),
 				go.IBaseY + y * ( go.IBoxDim + go.IOffsetY ), go.IBoxDim, go.IBoxDim };
-			addRectangle( bool( inputStateSinceLastFrame >> ( x + 4 * y ) & 1 ), drawPosition );
+			// inputStateSinceLastFrame >> 
+			const Uint8* state = SDL_GetKeyboardState(NULL);
+			addRectangle( bool( state[ keys[ x + 4 * y ] ] ), drawPosition );
 		}
 	}
 }
@@ -141,10 +143,11 @@ bool application::update() {
 	}
 
 	SDL_Event event;
-	while ( SDL_PollEvent( &event ) ) {
-		if ( event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_ESCAPE ) {
+	while (SDL_PollEvent(&event)) {
+		if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_ESCAPE) {
 			return false; // terminate on release of escape key
 		}
 	}
+	tick();
 	return true;
 }
